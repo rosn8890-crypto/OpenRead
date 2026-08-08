@@ -58,8 +58,8 @@ export default function ReviewsPanel({ bookId, onClose }: { bookId: string; onCl
     : null;
 
   return (
-    <div className="fixed inset-0 bg-black/70 z-40 flex items-center justify-center p-4">
-      <div className="bg-card border border-white/10 rounded-xl2 w-full max-w-lg max-h-[80vh] flex flex-col">
+    <div className="fixed inset-0 bg-black/70 z-[110] flex items-center justify-center p-4">
+      <div className="bg-card border border-white/10 rounded-xl2 w-full max-w-lg max-h-[80dvh] flex flex-col">
         <div className="flex items-center justify-between px-5 py-4 border-b border-white/10">
           <h2 className="font-semibold">
             Reviews {avgRating && <span className="text-primary">· ⭐ {avgRating}</span>}

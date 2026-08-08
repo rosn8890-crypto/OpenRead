@@ -109,29 +109,30 @@ export default function ReaderPanel({
   }
 
   return (
-    <div className="fixed right-0 top-0 h-full w-full sm:w-96 bg-card border-l border-white/10 z-30 flex flex-col">
-      <div className="flex items-center justify-between px-4 py-3 border-b border-white/10">
-        <div className="flex gap-2 text-sm">
-          <button
-            onClick={() => setTab("bookmarks")}
-            className={`px-3 py-1 rounded-lg ${tab === "bookmarks" ? "bg-primary text-black" : "text-white/60"}`}
-          >
-            Bookmarks
-          </button>
-          <button
-            onClick={() => setTab("notes")}
-            className={`px-3 py-1 rounded-lg ${tab === "notes" ? "bg-primary text-black" : "text-white/60"}`}
-          >
-            Notes & Highlights
-          </button>
-          <button
-            onClick={() => setTab("lists")}
-            className={`px-3 py-1 rounded-lg ${tab === "lists" ? "bg-primary text-black" : "text-white/60"}`}
-          >
-            Lists
-          </button>
-        </div>
-        <button onClick={onClose} className="text-white/50 hover:text-white">✕</button>
+    <div className="fixed right-0 top-0 h-[100dvh] w-full sm:w-96 bg-card border-l border-white/10 z-[110] flex flex-col">
+      <div className="flex items-center justify-between px-4 pt-3">
+        <h2 className="font-semibold text-sm text-white/70">Bookmarks & Notes</h2>
+        <button onClick={onClose} className="text-white/50 hover:text-white text-lg leading-none">✕</button>
+      </div>
+      <div className="flex gap-2 text-sm px-4 py-3 overflow-x-auto border-b border-white/10">
+        <button
+          onClick={() => setTab("bookmarks")}
+          className={`shrink-0 px-3 py-1.5 rounded-lg ${tab === "bookmarks" ? "bg-primary text-black" : "text-white/60 border border-white/15"}`}
+        >
+          Bookmarks
+        </button>
+        <button
+          onClick={() => setTab("notes")}
+          className={`shrink-0 px-3 py-1.5 rounded-lg ${tab === "notes" ? "bg-primary text-black" : "text-white/60 border border-white/15"}`}
+        >
+          Notes
+        </button>
+        <button
+          onClick={() => setTab("lists")}
+          className={`shrink-0 px-3 py-1.5 rounded-lg ${tab === "lists" ? "bg-primary text-black" : "text-white/60 border border-white/15"}`}
+        >
+          Lists
+        </button>
       </div>
 
       <div className="flex-1 overflow-y-auto p-4">

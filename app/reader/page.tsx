@@ -359,7 +359,7 @@ function ReaderContent() {
               ))}
             </div>
             <button
-              onClick={toggleFullscreen}
+              onClick={() => { toggleFullscreen(); setMoreMenuOpen(false); }}
               className={`px-3 py-2 rounded-lg border text-left ${isFullscreen ? "border-primary text-primary" : "border-white/20"}`}
             >
               {isFullscreen ? "⤓ Exit Full Screen" : "⛶ Full Screen"}
