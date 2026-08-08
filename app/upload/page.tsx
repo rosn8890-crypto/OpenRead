@@ -19,6 +19,9 @@ export default function UploadPage() {
     title: "", author: "", description: "", category: CATEGORIES[0],
     language: "English", tags: "", isbn: "", year: "",
   });
+  const [customCategory, setCustomCategory] = useState("");
+  const [usingCustomCategory, setUsingCustomCategory] = useState(false);
+  const [existingCategories, setExistingCategories] = useState<string[]>([]);
   const [file, setFile] = useState<File | null>(null);
   const [cover, setCover] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
@@ -30,11 +33,26 @@ export default function UploadPage() {
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (!user) router.push("/login");
     });
+
+    // Pull in any custom categories other users have already created, so
+    // the dropdown grows over time instead of only ever showing the
+    // original preset list.
+    supabase
+      .from("books")
+      .select("category")
+      .then(({ data }) => {
+        const extra = Array.from(new Set((data ?? []).map((b: any) => b.category)))
+          .filter((c) => !CATEGORIES.includes(c))
+          .sort();
+        setExistingCategories(extra);
+      });
   }, []);
 
   async function handleUpload(e: React.FormEvent) {
     e.preventDefault();
     if (!file) return setError("Please select a PDF or EPUB file.");
+    const finalCategory = usingCustomCategory ? customCategory.trim() : form.category;
+    if (usingCustomCategory && !finalCategory) return setError("Please enter a name for your new category.");
     setLoading(true);
     setError(null);
 
@@ -61,7 +79,7 @@ export default function UploadPage() {
         title: form.title,
         author: form.author,
         description: form.description,
-        category: form.category,
+        category: finalCategory,
         language: form.language,
         tags: form.tags.split(",").map((t) => t.trim()).filter(Boolean),
         isbn: form.isbn || null,
@@ -113,13 +131,49 @@ export default function UploadPage() {
           className="w-full bg-card border border-white/10 rounded-xl2 px-4 py-3"
         />
         <div className="grid grid-cols-2 gap-4">
-          <select
-            value={form.category}
-            onChange={(e) => setForm({ ...form, category: e.target.value })}
-            className="bg-card border border-white/10 rounded-xl2 px-4 py-3"
-          >
-            {CATEGORIES.map((c) => <option key={c}>{c}</option>)}
-          </select>
+          <div>
+            {!usingCustomCategory ? (
+              <select
+                value={form.category}
+                onChange={(e) => {
+                  if (e.target.value === "__custom__") {
+                    setUsingCustomCategory(true);
+                  } else {
+                    setForm({ ...form, category: e.target.value });
+                  }
+                }}
+                className="w-full bg-card border border-white/10 rounded-xl2 px-4 py-3"
+              >
+                <optgroup label="Categories">
+                  {CATEGORIES.map((c) => <option key={c}>{c}</option>)}
+                </optgroup>
+                {existingCategories.length > 0 && (
+                  <optgroup label="Community-added categories">
+                    {existingCategories.map((c) => <option key={c}>{c}</option>)}
+                  </optgroup>
+                )}
+                <option value="__custom__">+ Create new category...</option>
+              </select>
+            ) : (
+              <div className="flex gap-2">
+                <input
+                  autoFocus
+                  placeholder="New category name"
+                  value={customCategory}
+                  onChange={(e) => setCustomCategory(e.target.value)}
+                  className="flex-1 bg-card border border-primary/40 rounded-xl2 px-4 py-3"
+                />
+                <button
+                  type="button"
+                  onClick={() => { setUsingCustomCategory(false); setCustomCategory(""); }}
+                  className="px-3 rounded-xl2 border border-white/20 text-sm text-white/60"
+                  title="Cancel and pick from the list instead"
+                >
+                  ✕
+                </button>
+              </div>
+            )}
+          </div>
           <input
             placeholder="Language"
             value={form.language}
@@ -127,6 +181,11 @@ export default function UploadPage() {
             className="bg-card border border-white/10 rounded-xl2 px-4 py-3"
           />
         </div>
+        {usingCustomCategory && (
+          <p className="text-xs text-white/40 -mt-2">
+            This creates a brand new category — it'll show up on the Categories page for everyone once this book is approved.
+          </p>
+        )}
         <div className="grid grid-cols-2 gap-4">
           <input
             placeholder="Tags (comma separated)"
