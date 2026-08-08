@@ -1,21 +1,20 @@
-// Minimal service worker: mainly exists to satisfy installability checks
-// in browsers that require one (some Chrome/Edge versions won't offer
-// "Install" without a registered service worker, even with a valid
-// manifest). It does a simple network-first pass-through for now — no
-// offline caching yet, that's a separate feature to add later if wanted.
-
-const CACHE_NAME = "openread-v1";
+// Minimal service worker: exists ONLY to satisfy installability checks in
+// browsers that require a registered service worker before offering
+// "Install" (some Chrome/Edge versions). It intentionally does NOT cache
+// anything and does NOT intercept fetch requests.
+//
+// Why so bare: an earlier version called self.clients.claim() in
+// "activate", which makes the service worker immediately take over
+// control of the page that's still loading. That caused a real bug —
+// the site would sometimes render blank on the very first visit and only
+// work after a manual refresh, because control was being handed over
+// mid-load. Since this worker provides no real caching benefit yet,
+// there's no reason to risk that — it just needs to exist and be active.
 
 self.addEventListener("install", () => {
   self.skipWaiting();
 });
 
-self.addEventListener("activate", (event) => {
-  event.waitUntil(self.clients.claim());
-});
-
-self.addEventListener("fetch", (event) => {
-  event.respondWith(
-    fetch(event.request).catch(() => caches.match(event.request))
-  );
+self.addEventListener("activate", () => {
+  // Deliberately NOT calling self.clients.claim() here — see note above.
 });

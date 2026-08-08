@@ -67,24 +67,25 @@ function ReaderContent() {
     setAspectRatio(w / h);
   }
 
-  // Full screen: uses the browser's native Fullscreen API on the whole
-  // reader container. Works the same on a static export — no server involved.
+  // "Full Screen" is CSS-only (position: fixed, covers the whole viewport)
+  // rather than the browser's real Fullscreen API. Real fullscreen mode
+  // disables pinch-to-zoom on most phones by OS-level design — there's no
+  // way to override that from code — so faking it with CSS gets the same
+  // "takes over the screen" look while keeping pinch-zoom fully working.
   function toggleFullscreen() {
-    if (!containerRef.current) return;
-    if (!document.fullscreenElement) {
-      containerRef.current.requestFullscreen().catch(() => {});
-    } else {
-      document.exitFullscreen().catch(() => {});
-    }
+    setIsFullscreen((v) => !v);
   }
 
+  // Esc also exits our CSS-based fullscreen, same as it would for the
+  // browser's native one.
   useEffect(() => {
-    function handleFsChange() {
-      setIsFullscreen(!!document.fullscreenElement);
+    if (!isFullscreen) return;
+    function handleEsc(e: KeyboardEvent) {
+      if (e.key === "Escape") setIsFullscreen(false);
     }
-    document.addEventListener("fullscreenchange", handleFsChange);
-    return () => document.removeEventListener("fullscreenchange", handleFsChange);
-  }, []);
+    window.addEventListener("keydown", handleEsc);
+    return () => window.removeEventListener("keydown", handleEsc);
+  }, [isFullscreen]);
 
   // Keyboard shortcuts: ← / → change page, Esc closes any open panel.
   useEffect(() => {
@@ -193,6 +194,12 @@ function ReaderContent() {
   // horizontal movement clearly dominates, so a normal up/down scroll
   // never gets mistaken for a page turn.
   function handleTouchStart(e: React.TouchEvent) {
+    // More than one finger means a pinch gesture, not a swipe — leave it
+    // completely alone so the browser's native pinch-to-zoom still works.
+    if (e.touches.length > 1) {
+      touchStart.current = null;
+      return;
+    }
     const t = e.touches[0];
     touchStart.current = { x: t.clientX, y: t.clientY };
   }
@@ -282,7 +289,9 @@ function ReaderContent() {
   return (
     <div
       ref={containerRef}
-      className={`flex flex-col h-screen ${themeClasses[theme]} transition-colors`}
+      className={`flex flex-col ${themeClasses[theme]} transition-colors ${
+        isFullscreen ? "fixed inset-0 z-[100] h-[100dvh]" : "h-screen"
+      }`}
     >
       <div className="border-b border-white/10 sticky top-0 bg-inherit z-10">
         {/* Slim bar: always visible, works on any screen size */}
