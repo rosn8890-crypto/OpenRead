@@ -1,5 +1,8 @@
 # OpenRead — Free Online Book Reading Platform
 
+
+CLICK FOR LIVE WEBSITE DEMO :- https://sudo-learner.github.io/OpenRead/
+
 A starter version of OpenRead, built to deploy on **GitHub Pages only — no Vercel needed**.
 
 Next.js + TypeScript + Tailwind, exported as a fully static site (`output: 'export'`),
