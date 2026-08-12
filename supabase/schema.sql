@@ -202,3 +202,17 @@ $$ language plpgsql security definer;
 create trigger on_auth_user_created
   after insert on auth.users
   for each row execute procedure public.handle_new_user();
+
+-- ========== DOWNLOAD COUNTER ==========
+-- Lets ANY logged-in reader bump a book's download_count by exactly 1,
+-- without needing general permission to edit that book's row (which stays
+-- restricted to its owner/admins). SECURITY DEFINER lets this one narrow
+-- action bypass that restriction safely, since it can't do anything else.
+create function public.increment_download_count(book_id uuid)
+returns void as $$
+begin
+  update public.books set download_count = download_count + 1 where id = book_id;
+end;
+$$ language plpgsql security definer;
+
+grant execute on function public.increment_download_count(uuid) to authenticated;

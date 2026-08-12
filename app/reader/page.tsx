@@ -22,6 +22,9 @@ function ReaderContent() {
   const pageAreaRef = useRef<HTMLDivElement>(null);
 
   const [fileUrl, setFileUrl] = useState<string | null>(null);
+  const [bookTitle, setBookTitle] = useState("book");
+  const [bookFileType, setBookFileType] = useState("pdf");
+  const [downloading, setDownloading] = useState(false);
   const [numPages, setNumPages] = useState(0);
   const [pageNumber, setPageNumber] = useState(1);
   const [theme, setTheme] = useState<"dark" | "sepia" | "light">("dark");
@@ -109,13 +112,15 @@ function ReaderContent() {
     async function load() {
       const { data: book } = await supabase
         .from("books")
-        .select("file_path")
+        .select("file_path, title, file_type")
         .eq("id", id)
         .single();
 
       if (book) {
         const { data } = supabase.storage.from("books").getPublicUrl(book.file_path);
         setFileUrl(data.publicUrl);
+        setBookTitle(book.title ?? "book");
+        setBookFileType(book.file_type ?? "pdf");
       }
 
       const { data: { user } } = await supabase.auth.getUser();
@@ -239,12 +244,19 @@ function ReaderContent() {
       // the browser (unlike a generative-AI API key, this one is meant
       // to be used client-side with no secret to protect).
       const res = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(word)}`);
-      if (!res.ok) throw new Error("not found");
+      if (res.status === 404) {
+        setDictDefinition(`No dictionary entry found for "${word}".`);
+        return;
+      }
+      if (!res.ok) throw new Error(`Dictionary service returned ${res.status}`);
       const data = await res.json();
       const def = data[0]?.meanings?.[0]?.definitions?.[0]?.definition;
-      setDictDefinition(def || "No definition found.");
-    } catch {
-      setDictDefinition("No definition found for that word.");
+      setDictDefinition(def || `No definition found for "${word}".`);
+    } catch (err) {
+      // A distinct message here (vs "not found" above) makes it possible to
+      // tell a real network/CORS/offline problem apart from just an
+      // uncommon word — worth knowing if this ever needs debugging again.
+      setDictDefinition("Couldn't reach the dictionary service — check your connection and try again.");
     } finally {
       setDictLoading(false);
     }
@@ -257,6 +269,42 @@ function ReaderContent() {
     // gets the same result for the reader without exposing any secret.
     const url = `https://translate.google.com/?sl=auto&tl=hi&text=${encodeURIComponent(selectedText)}&op=translate`;
     window.open(url, "_blank");
+  }
+
+  async function downloadBook() {
+    if (!fileUrl || downloading) return;
+    setDownloading(true);
+    try {
+      // A plain <a download> is ignored by browsers for cross-origin URLs
+      // (the file lives on Supabase's domain, not this site's), so it
+      // would just open the file instead of saving it. Fetching it as a
+      // blob first and downloading THAT is what actually forces a save.
+      const res = await fetch(fileUrl);
+      if (!res.ok) throw new Error("download failed");
+      const blob = await res.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      const safeName = bookTitle.replace(/[/\\?%*:|"<>]/g, "-");
+      const a = document.createElement("a");
+      a.href = blobUrl;
+      a.download = `${safeName}.${bookFileType}`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(blobUrl);
+
+      // Best-effort download count — uses a database function since a
+      // regular reader isn't allowed to edit someone else's book row
+      // directly (that's intentionally restricted); this function is the
+      // one safe, narrow exception. If it fails for any reason, the
+      // download itself still succeeded, so we don't show an error for it.
+      if (id) supabase.rpc("increment_download_count", { book_id: id }).then(() => {});
+    } catch {
+      // Fallback: open it directly. Won't force a "Save As" dialog the
+      // same way, but the person can still still save it from there.
+      window.open(fileUrl, "_blank");
+    } finally {
+      setDownloading(false);
+    }
   }
 
   function handleJumpSubmit(e: React.FormEvent) {
@@ -318,6 +366,13 @@ function ReaderContent() {
               {isFullscreen ? "⤓ Exit Full Screen" : "⛶ Full Screen"}
             </button>
             <TextToSpeech text={pageText} />
+            <button
+              onClick={downloadBook}
+              disabled={downloading}
+              className="px-3 py-1.5 rounded-lg border border-white/20 hover:bg-white/5"
+            >
+              {downloading ? "⏳ Downloading..." : "⬇ Download"}
+            </button>
             <button onClick={() => setReviewsOpen(true)} className="px-3 py-1.5 rounded-lg border border-white/20 hover:bg-white/5">
               ⭐ Reviews
             </button>
@@ -365,6 +420,13 @@ function ReaderContent() {
               {isFullscreen ? "⤓ Exit Full Screen" : "⛶ Full Screen"}
             </button>
             <TextToSpeech text={pageText} />
+            <button
+              onClick={() => { downloadBook(); setMoreMenuOpen(false); }}
+              disabled={downloading}
+              className="px-3 py-2 rounded-lg border border-white/20 text-left"
+            >
+              {downloading ? "⏳ Downloading..." : "⬇ Download book"}
+            </button>
             <button onClick={() => { setReviewsOpen(true); setMoreMenuOpen(false); }} className="px-3 py-2 rounded-lg border border-white/20 text-left">
               ⭐ Reviews
             </button>

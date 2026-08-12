@@ -1,6 +1,5 @@
 "use client";
 
-import { useRef } from "react";
 import { Document, Page, pdfjs } from "react-pdf";
 import { motion, AnimatePresence } from "framer-motion";
 import "react-pdf/dist/Page/TextLayer.css";
@@ -27,9 +26,8 @@ export default function PdfViewer({
   turnDirection?: 1 | -1;
   onLoadSuccess: (numPages: number) => void;
   onError: () => void;
-  // Called with the plain text of the currently rendered page, once react-pdf
-  // has drawn its (invisible, selectable) text layer over the page image.
-  // Used for Text-to-Speech and for reading the user's text selection.
+  // Called with the plain text of the currently rendered page. Used for
+  // Text-to-Speech.
   onPageTextReady?: (text: string) => void;
   // Called with the page's natural width/height (in PDF points) once known,
   // so the reader can size the page to fit the screen both across AND
@@ -37,26 +35,34 @@ export default function PdfViewer({
   // taller than the screen and needing a scroll to see the rest.
   onPageDimensions?: (width: number, height: number) => void;
 }) {
-  const containerRef = useRef<HTMLDivElement>(null);
-
-  function handleTextLayerReady() {
-    if (!containerRef.current || !onPageTextReady) return;
-    // react-pdf renders each page's extracted text as an invisible overlay
-    // of <span> elements (.react-pdf__Page__textContent) on top of the
-    // canvas image — this is what makes PDF text selectable/searchable.
-    // We read it back out here to feed the speech synthesizer.
-    const layer = containerRef.current.querySelector(".react-pdf__Page__textContent");
-    if (layer) onPageTextReady(layer.textContent || "");
-  }
-
   function handlePageLoadSuccess(page: any) {
-    if (!onPageDimensions) return;
-    // pdf.js's page proxy exposes the natural page box via .view =
-    // [x0, y0, x1, y1] in PDF points — read defensively since exact
-    // property names can vary slightly across pdf.js versions.
-    const w = page?.originalWidth ?? (page?.view ? page.view[2] - page.view[0] : null);
-    const h = page?.originalHeight ?? (page?.view ? page.view[3] - page.view[1] : null);
-    if (w && h) onPageDimensions(w, h);
+    if (onPageDimensions) {
+      // pdf.js's page proxy exposes the natural page box via .view =
+      // [x0, y0, x1, y1] in PDF points — read defensively since exact
+      // property names can vary slightly across pdf.js versions.
+      const w = page?.originalWidth ?? (page?.view ? page.view[2] - page.view[0] : null);
+      const h = page?.originalHeight ?? (page?.view ? page.view[3] - page.view[1] : null);
+      if (w && h) onPageDimensions(w, h);
+    }
+
+    if (onPageTextReady) {
+      // Read the text straight from the parsed PDF data via pdf.js, rather
+      // than scraping it back out of the rendered DOM text layer. The DOM
+      // approach used to live here but was unreliable: the page-turn
+      // animation keys and remounts this component's wrapper on every page
+      // change, and a plain useRef shared across those mounts/unmounts can
+      // get cleared by an old page's unmount right as the new page's ref
+      // is what should be in use — an easy way for "Listen to this page"
+      // to end up reading stale or empty text. Going straight to the
+      // source avoids all of that.
+      page
+        .getTextContent()
+        .then((content: any) => {
+          const text = (content?.items ?? []).map((item: any) => item.str ?? "").join(" ");
+          onPageTextReady(text);
+        })
+        .catch(() => onPageTextReady(""));
+    }
   }
 
   return (
@@ -70,18 +76,23 @@ export default function PdfViewer({
       onLoadSuccess={({ numPages }) => onLoadSuccess(numPages)}
       onLoadError={onError}
     >
-      <div style={{ perspective: 1800 }}>
+      <div style={{ perspective: 2200 }}>
         <AnimatePresence initial={false} mode="popLayout">
           <motion.div
             key={pageNumber}
-            ref={containerRef}
-            initial={{ rotateY: turnDirection > 0 ? 65 : -65, opacity: 0 }}
+            initial={{ rotateY: turnDirection > 0 ? 92 : -92, opacity: 0.4 }}
             animate={{ rotateY: 0, opacity: 1 }}
-            exit={{ rotateY: turnDirection > 0 ? -65 : 65, opacity: 0 }}
-            transition={{ duration: 0.32, ease: "easeInOut" }}
+            exit={{ rotateY: turnDirection > 0 ? -92 : 92, opacity: 0.4 }}
+            transition={{ duration: 0.42, ease: [0.45, 0.05, 0.15, 1] as const }}
             style={{
+              position: "relative",
               transformStyle: "preserve-3d",
               transformOrigin: turnDirection > 0 ? "left center" : "right center",
+              backfaceVisibility: "hidden",
+              // The page "lifts" off the book while turning, then settles
+              // flat again — a plain flat rotation with no shadow change
+              // reads as a stiff card flip rather than paper.
+              boxShadow: "0 25px 50px -12px rgba(0,0,0,0.5)",
             }}
           >
             <Page
@@ -90,7 +101,28 @@ export default function PdfViewer({
               renderTextLayer={true}
               renderAnnotationLayer={false}
               onLoadSuccess={handlePageLoadSuccess}
-              onRenderTextLayerSuccess={handleTextLayerReady}
+            />
+
+            {/* Fold shading: a gradient hugging the turning edge that darkens
+                as the page curls away and fades once it lies flat again —
+                this is what actually sells "paper folding" over "card
+                spinning". It's a separate layer on top of the page so it
+                can fade independently of the page's own opacity. */}
+            <motion.div
+              aria-hidden
+              initial={{ opacity: 0.55 }}
+              animate={{ opacity: 0 }}
+              exit={{ opacity: 0.55 }}
+              transition={{ duration: 0.42, ease: [0.45, 0.05, 0.15, 1] as const }}
+              style={{
+                position: "absolute",
+                inset: 0,
+                pointerEvents: "none",
+                background:
+                  turnDirection > 0
+                    ? "linear-gradient(to right, rgba(0,0,0,0.55), transparent 35%)"
+                    : "linear-gradient(to left, rgba(0,0,0,0.55), transparent 35%)",
+              }}
             />
           </motion.div>
         </AnimatePresence>

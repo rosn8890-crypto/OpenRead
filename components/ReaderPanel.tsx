@@ -28,6 +28,7 @@ export default function ReaderPanel({
   const [loading, setLoading] = useState(true);
   const [lists, setLists] = useState<any[]>([]);
   const [listMembership, setListMembership] = useState<Set<string>>(new Set());
+  const [listError, setListError] = useState<string | null>(null);
 
   useEffect(() => {
     async function load() {
@@ -53,15 +54,27 @@ export default function ReaderPanel({
   }, [bookId]);
 
   async function toggleListMembership(listId: string) {
+    setListError(null);
     if (listMembership.has(listId)) {
-      await supabase.from("reading_list_items").delete().eq("list_id", listId).eq("book_id", bookId);
+      const { error } = await supabase.from("reading_list_items").delete().eq("list_id", listId).eq("book_id", bookId);
+      if (error) {
+        setListError("Couldn't remove this book from the list. Try refreshing the page.");
+        return;
+      }
       setListMembership((prev) => {
         const next = new Set(prev);
         next.delete(listId);
         return next;
       });
     } else {
-      await supabase.from("reading_list_items").insert({ list_id: listId, book_id: bookId });
+      const { error } = await supabase.from("reading_list_items").insert({ list_id: listId, book_id: bookId });
+      if (error) {
+        // Most likely cause: the Supabase project is missing the RLS
+        // policies that let a list's owner insert/delete its items — see
+        // supabase/migration_add_list_and_admin_policies.sql.
+        setListError("Couldn't add this book to the list. Make sure the list permissions migration has been run.");
+        return;
+      }
       setListMembership((prev) => new Set(prev).add(listId));
     }
   }
@@ -215,6 +228,9 @@ export default function ReaderPanel({
           </>
         ) : (
           <>
+            {listError && (
+              <p className="text-danger text-xs mb-3 glass rounded-lg p-2">{listError}</p>
+            )}
             {lists.length === 0 ? (
               <p className="text-white/40 text-sm">
                 You don't have any reading lists yet. Create one from the{" "}
