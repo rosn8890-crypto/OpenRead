@@ -54,6 +54,15 @@ your data.
 Once your site is live at `https://sudo-learner.github.io/OpenRead/`, it works
 as a real installable app — no app store, no separate download.
 
+**Note:** this used to also register a service worker to help satisfy some
+browsers' install checks. It was removed — it never did any real caching,
+and it turned out to be the cause of two separate real bugs (a blank first
+load, and data not loading until a manual refresh). Chrome/Edge on desktop
+and Android still generally offer to install based on the manifest and
+icons alone; there's a small chance some older browser versions are
+stricter, but reliability of the actual site mattered more than that edge
+case.
+
 **On a computer (Chrome / Edge):**
 1. Open your live site in the browser
 2. Look for an install icon (⊕ or a small monitor icon) at the right end of

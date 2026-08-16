@@ -23,6 +23,7 @@ function Row({ title, books }: { title: string; books: Book[] }) {
 }
 
 const SECTION_KEYS = [
+  "continueReading",
   "trending", "popular", "recent",
   "selfImprovement", "motivation",
   "cyber", "hacking", "programming",
@@ -49,8 +50,23 @@ export default function HomePage() {
         return data ?? [];
       }
 
-      const [trending, popular, recent, selfImprovement, motivation, cyber, hacking, programming] =
+      async function getContinueReading(): Promise<Book[]> {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return [];
+        const { data } = await supabase
+          .from("reading_progress")
+          .select("book_id, last_read_at, books(id, title, author, cover_url, category)")
+          .eq("user_id", user.id)
+          .order("last_read_at", { ascending: false })
+          .limit(10);
+        return (data ?? [])
+          .map((p: any) => p.books)
+          .filter(Boolean);
+      }
+
+      const [continueReading, trending, popular, recent, selfImprovement, motivation, cyber, hacking, programming] =
         await Promise.all([
+          getContinueReading(),
           getSection("view_count"),
           getSection("download_count"),
           getSection("created_at"),
@@ -61,7 +77,7 @@ export default function HomePage() {
           getSection("created_at", "Programming"),
         ]);
 
-      setSections({ trending, popular, recent, selfImprovement, motivation, cyber, hacking, programming });
+      setSections({ continueReading, trending, popular, recent, selfImprovement, motivation, cyber, hacking, programming });
       setLoading(false);
     }
     load();
@@ -75,6 +91,7 @@ export default function HomePage() {
         <p className="text-center py-10 text-white/40">Loading books...</p>
       ) : (
         <>
+          <Row title="Continue Reading" books={sections.continueReading} />
           <Row title="Trending Books" books={sections.trending} />
           <Row title="Popular Books" books={sections.popular} />
           <Row title="Recently Added" books={sections.recent} />

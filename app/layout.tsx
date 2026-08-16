@@ -1,6 +1,6 @@
 import "./globals.css";
 import Navbar from "@/components/Navbar";
-import ServiceWorkerRegister from "@/components/ServiceWorkerRegister";
+import ServiceWorkerCleanup from "@/components/ServiceWorkerCleanup";
 
 // Next.js's metadata API does NOT automatically prepend the configured
 // basePath to manifest/icon URLs the way it does for next/link and
@@ -43,7 +43,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en">
       <body>
-        <ServiceWorkerRegister />
+        <ServiceWorkerCleanup />
         <Navbar />
         <main className="min-h-screen">{children}</main>
       </body>
