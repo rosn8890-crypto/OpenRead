@@ -16,6 +16,18 @@ html {
   }
 }
 
+html, body {
+  /* Something wider than the screen (long unbroken text, a fixed-width
+     row, etc.) can make the whole page wider than the viewport on
+     mobile — the browser then lets you scroll/shift sideways to see it,
+     which is exactly the "site opens shifted to the right" symptom.
+     This caps the page at the screen's actual width so that can't happen,
+     without affecting pinch-zoom (which works on the visual viewport,
+     not page layout width). */
+  overflow-x: hidden;
+  max-width: 100vw;
+}
+
 body {
   background-color: #0A0A0A;
   color: #ffffff;

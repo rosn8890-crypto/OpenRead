@@ -131,7 +131,23 @@ function ReaderContent() {
           .eq("book_id", id)
           .eq("user_id", user.id)
           .maybeSingle();
+        const openedAtPage = progress?.current_page || 1;
         if (progress?.current_page) setPageNumber(progress.current_page);
+
+        // Record that this book was opened right away — previously,
+        // nothing was saved until the reader actually flipped to a
+        // different page, so just opening and reading page 1 never
+        // registered at all, and the book could never show up under
+        // "Continue Reading" on the homepage or dashboard.
+        await supabase.from("reading_progress").upsert(
+          {
+            user_id: user.id,
+            book_id: id,
+            current_page: openedAtPage,
+            last_read_at: new Date().toISOString(),
+          },
+          { onConflict: "user_id,book_id" }
+        );
       }
       setLoading(false);
     }
