@@ -51,7 +51,7 @@ Supabase's Row Level Security, which applies no matter how someone reaches
 your data.
 
 ## Install as an App (desktop and mobile)
-Once your site is live at `[https://rosn8890-crypto.github.io/OpenRead/](url)`, it works
+Once your site is live at [https://rosn8890-crypto.github.io/OpenRead/](https://rosn8890-crypto.github.io/OpenRead/), it works
 as a real installable app — no app store, no separate download.
 
 **Note:** this used to also register a service worker to help satisfy some
