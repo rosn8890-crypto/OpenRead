@@ -161,7 +161,7 @@ export default function UploadPage() {
                   placeholder="New category name"
                   value={customCategory}
                   onChange={(e) => setCustomCategory(e.target.value)}
-                  className="flex-1 bg-card border border-primary/40 rounded-xl2 px-4 py-3"
+                  className="flex-1 min-w-0 bg-card border border-primary/40 rounded-xl2 px-4 py-3"
                 />
                 <button
                   type="button"

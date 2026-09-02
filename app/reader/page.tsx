@@ -454,7 +454,7 @@ function ReaderContent() {
                 value={jumpInput}
                 onChange={(e) => setJumpInput(e.target.value)}
                 placeholder="Go to page number"
-                className="flex-1 bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-sm"
+                className="flex-1 min-w-0 bg-black/30 border border-white/10 rounded-lg px-3 py-2 text-sm"
               />
               <button className="px-3 py-2 rounded-lg border border-white/20">Go</button>
             </form>

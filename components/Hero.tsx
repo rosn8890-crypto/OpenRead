@@ -28,7 +28,7 @@ export default function Hero() {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search title, author, category..."
-          className="flex-1 bg-card border border-white/10 rounded-xl2 px-4 py-3 outline-none focus:border-primary"
+          className="flex-1 min-w-0 bg-card border border-white/10 rounded-xl2 px-4 py-3 outline-none focus:border-primary"
         />
         <button className="bg-primary text-black font-semibold px-6 py-3 rounded-xl2 glow-primary">
           Search
